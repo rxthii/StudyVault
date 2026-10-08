@@ -152,7 +152,6 @@ class IngestionService:
                     raw_chunks_to_embed.append(split)
                     chunk_metadata_list.append({
                         "document_id": doc_id,
-                        "owner_id": self.repo.owner_id,
                         "chunk_id": chunk_id,
                         "page_number": page_num,
                         "text": split,
@@ -175,6 +174,7 @@ class IngestionService:
                     "values": vec,
                     "metadata": {
                         "document_id": doc_id,
+                        "owner_id": self.repo.owner_id,
                         "filename": sanitized_name,
                         "chunk_id": meta["chunk_id"],
                         "page_number": meta["page_number"],
