@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     OPENROUTER_MODEL: str = "nvidia/nemotron-3.5-lightning:free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
 
+    # Local-only fallback. Render supplies a generated secret via render.yaml.
+    AUTH_SECRET_KEY: str = "local-development-secret-change-before-deploy"
+
     # Pinecone Vector Database Configuration
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = "studyvault"

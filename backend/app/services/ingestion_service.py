@@ -152,6 +152,7 @@ class IngestionService:
                     raw_chunks_to_embed.append(split)
                     chunk_metadata_list.append({
                         "document_id": doc_id,
+                        "owner_id": self.repo.owner_id,
                         "chunk_id": chunk_id,
                         "page_number": page_num,
                         "text": split,

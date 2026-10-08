@@ -45,7 +45,8 @@ class PineconeDocumentRetriever:
         query: str,
         allowed_document_ids: List[str],
         top_k: Optional[int] = None,
-        similarity_threshold: Optional[float] = None
+        similarity_threshold: Optional[float] = None,
+        owner_id: Optional[str] = None
     ) -> List[SourceReference]:
         """
         Retrieves top relevant chunks from Pinecone.
@@ -64,9 +65,10 @@ class PineconeDocumentRetriever:
         # 2. Build metadata filter for active documents
         # In Pinecone, {"document_id": {"$in": [...]}} or {"document_id": {"$eq": "..."}}
         if len(allowed_document_ids) == 1:
-            meta_filter = {"document_id": {"$eq": allowed_document_ids[0]}}
+            document_filter = {"document_id": {"$eq": allowed_document_ids[0]}}
         else:
-            meta_filter = {"document_id": {"$in": allowed_document_ids}}
+            document_filter = {"document_id": {"$in": allowed_document_ids}}
+        meta_filter = {"$and": [document_filter, {"owner_id": {"$eq": owner_id}}]} if owner_id else document_filter
 
         # 3. Query Pinecone
         matches = self.pinecone_mgr.query(

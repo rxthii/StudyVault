@@ -4,6 +4,7 @@ from sqlalchemy import text
 from app.database.database import get_db
 from app.core.config import Settings, get_settings
 from app.vectorstore.pinecone_client import get_pinecone_manager
+from app.database.repositories import DocumentRepository
 
 router = APIRouter(tags=["System"])
 
@@ -47,7 +48,7 @@ def service_status(
         pinecone_info = {
             "index_name": stats.get("index_name"),
             "dimension": stats.get("dimension"),
-            "total_vectors": stats.get("total_vector_count"),
+            "total_vectors": sum(len(document.chunks) for document in DocumentRepository(db).list_documents()),
             "connected": pinecone_ok
         }
     except Exception as e:

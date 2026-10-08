@@ -3,7 +3,7 @@
  * Frontend Application Root
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext.tsx';
 import { Sidebar, type NavTab } from './components/common/Sidebar.tsx';
 import { Header } from './components/common/Header.tsx';
@@ -16,8 +16,11 @@ import { DocumentsPage } from './pages/DocumentsPage.tsx';
 import { FlashcardsPage } from './pages/FlashcardsPage.tsx';
 import { QuizPage } from './pages/QuizPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
+import { AuthPage } from './components/AuthPage.tsx';
+import { getCurrentUser, type AccountUser } from './api/auth.ts';
+import { clearAccessToken, getAccessToken } from './api/client.ts';
 
-function MainLayout() {
+function MainLayout({ user, onLogout }: { user: AccountUser; onLogout: () => void }) {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [chatKey, setChatKey] = useState<number>(1);
@@ -48,6 +51,8 @@ function MainLayout() {
           onOpenMobile={() => setMobileMenuOpen(true)}
           onNavigate={setCurrentTab}
           onNewChat={handleNewChat}
+          accountEmail={user.email}
+          onLogout={onLogout}
         />
 
         <main className="flex-1 min-w-0">
@@ -85,9 +90,33 @@ function MainLayout() {
 }
 
 export default function App() {
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      setCheckingSession(false);
+      return;
+    }
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => { clearAccessToken(); setUser(null); })
+      .finally(() => setCheckingSession(false));
+  }, []);
+
+  const logout = () => {
+    clearAccessToken();
+    setUser(null);
+  };
+
+  if (checkingSession) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading your StudyVault account…</div>;
+  }
+  if (!user) return <AuthPage onAuthenticated={setUser} />;
+
   return (
-    <AppProvider>
-      <MainLayout />
+    <AppProvider key={user.id}>
+      <MainLayout user={user} onLogout={logout} />
     </AppProvider>
   );
 }

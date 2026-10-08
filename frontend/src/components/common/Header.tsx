@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Plus, Upload, Layers, HelpCircle } from 'lucide-react';
+import { Menu, Plus, Upload, Layers, HelpCircle, LogOut } from 'lucide-react';
 import { useApp } from '../../context/AppContext.tsx';
 import type { NavTab } from './Sidebar.tsx';
 
@@ -8,6 +8,8 @@ interface HeaderProps {
   onOpenMobile: () => void;
   onNavigate: (tab: NavTab) => void;
   onNewChat?: () => void;
+  accountEmail: string;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +17,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobile,
   onNavigate,
   onNewChat,
+  accountEmail,
+  onLogout,
 }) => {
   const { activeDocuments } = useApp();
 
@@ -110,6 +114,12 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Ask a Question</span>
           </button>
         )}
+        <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-3">
+          <span className="hidden max-w-36 truncate text-xs text-slate-500 lg:block" title={accountEmail}>{accountEmail}</span>
+          <button onClick={onLogout} title="Sign out" aria-label="Sign out" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <LogOut className="h-4 w-4" /><span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
       </div>
     </header>
   );

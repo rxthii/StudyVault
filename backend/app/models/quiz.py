@@ -8,6 +8,7 @@ class Quiz(Base):
     __tablename__ = "quizzes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), nullable=True, index=True)
     title = Column(String(255), nullable=True)
     difficulty = Column(String(50), default="medium", nullable=False)
     question_count = Column(Integer, default=5, nullable=False)

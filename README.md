@@ -4,6 +4,7 @@ StudyVault is a document-grounded study assistant. It connects a React frontend 
 
 ## Features
 
+- Email and password accounts with separate document libraries and study history
 - Upload and manage PDF and TXT study documents
 - Ask questions and get answers grounded in linked documents
 - Inspect source passages and page references
@@ -51,11 +52,13 @@ npm run dev
 
 Open `http://localhost:3000`. By default, the frontend connects to `http://127.0.0.1:8000`. To change that, copy `frontend/.env.example` to `frontend/.env` and edit `VITE_API_BASE_URL`.
 
+Create an account on the sign-in screen. Your documents, chats, quizzes, and flashcards are scoped to that account. Documents uploaded before accounts were added are left private from all accounts; upload them again after signing in.
+
 ## Deploy with Render
 
 The root `render.yaml` defines the frontend and backend as a Render Blueprint. Push this repository to a private GitHub repository, then in Render choose **New → Blueprint** and connect it. Provide `OPENROUTER_API_KEY` and `PINECONE_API_KEY` in Render's secret prompts.
 
-The backend configuration includes a persistent disk for the SQLite database and uploaded files. This requires a paid backend service; review Render's displayed price before creating the services. The deployed database starts empty, so upload documents again after deployment.
+The backend configuration includes a persistent disk for the SQLite database and uploaded files. This requires a paid backend service; review Render's displayed price before creating the services. Render generates the private account-token signing key automatically. The deployed database starts empty, so upload documents again after deployment.
 
 More deployment details are in [DEPLOY.md](DEPLOY.md).
 

@@ -76,6 +76,7 @@ class RetrievalService:
         results = self.retriever.retrieve(
             query=query,
             allowed_document_ids=effective_doc_ids,
+            owner_id=self.repo.owner_id,
             top_k=k,
             similarity_threshold=similarity_threshold
         )
@@ -98,11 +99,12 @@ class RetrievalService:
         all_docs = self.repo.list_documents()
         linked_docs = [d for d in all_docs if d.linked and d.status == "ready"]
 
+        owned_vector_count = sum(len(document.chunks) for document in all_docs)
         return RetrievalStatsResponse(
             index_name=stats.get("index_name", self.settings.PINECONE_INDEX_NAME),
             dimension=stats.get("dimension", self.settings.EMBEDDING_DIMENSION),
-            total_vector_count=stats.get("total_vector_count", 0),
-            namespaces=stats.get("namespaces", {}),
+            total_vector_count=owned_vector_count,
+            namespaces={self.settings.PINECONE_NAMESPACE: {"vector_count": owned_vector_count}},
             linked_documents_count=len(linked_docs),
             total_documents_count=len(all_docs)
         )

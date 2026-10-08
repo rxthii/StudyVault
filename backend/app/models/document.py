@@ -9,6 +9,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), nullable=True, index=True)
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=False)
     file_type = Column(String(20), nullable=False)  # pdf, txt

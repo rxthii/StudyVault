@@ -4,6 +4,24 @@
  */
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const ACCESS_TOKEN_KEY = 'studyvault_access_token';
+
+export function getAccessToken(): string | null {
+  try { return localStorage.getItem(ACCESS_TOKEN_KEY); } catch { return null; }
+}
+
+export function setAccessToken(token: string): void {
+  try { localStorage.setItem(ACCESS_TOKEN_KEY, token); } catch { /* Ignore storage issues */ }
+}
+
+export function clearAccessToken(): void {
+  try { localStorage.removeItem(ACCESS_TOKEN_KEY); } catch { /* Ignore storage issues */ }
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export class StudyVaultApiError extends Error {
   code: string;
@@ -109,6 +127,7 @@ export async function apiGet<T>(path: string, params?: Record<string, any>): Pro
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        ...authHeaders(),
       },
     });
     return await handleResponse<T>(response);
@@ -132,6 +151,7 @@ export async function apiPost<T>(path: string, body?: any): Promise<T> {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...authHeaders(),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
@@ -156,6 +176,7 @@ export async function apiPatch<T>(path: string, body: any): Promise<T> {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...authHeaders(),
       },
       body: JSON.stringify(body),
     });
@@ -179,6 +200,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
+        ...authHeaders(),
       },
     });
     return await handleResponse<T>(response);
@@ -207,6 +229,7 @@ export async function apiUploadFiles<T>(path: string, files: File[]): Promise<T>
       // Notice: don't set Content-Type header when sending FormData; browser will set multipart boundary
       headers: {
         'Accept': 'application/json',
+        ...authHeaders(),
       },
       body: formData,
     });

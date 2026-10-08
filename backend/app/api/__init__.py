@@ -7,10 +7,12 @@ from .flashcards import router as flashcards_router
 from .quiz import router as quiz_router
 from .sources import router as sources_router
 from .search import router as search_router
+from .auth import router as auth_router
 
 api_router = APIRouter(prefix="/api")
 
 api_router.include_router(health_router)
+api_router.include_router(auth_router)
 api_router.include_router(documents_router)
 api_router.include_router(retrieval_router)
 api_router.include_router(chat_router)

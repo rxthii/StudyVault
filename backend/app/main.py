@@ -1,13 +1,67 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.requests import Request
 
 from app.core.config import get_settings
+from app.core.auth_tokens import decode_access_token
 from app.core.logging import logger
 from app.core.errors import register_exception_handlers
 from app.database.database import init_db
 from app.api import api_router
+
+
+class AuthenticationMiddleware:
+    """Require a signed account token for every private API route."""
+
+    PUBLIC_PATHS = {
+        "/",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/api/health",
+        "/api/auth/register",
+        "/api/auth/login",
+    }
+
+    def __init__(self, app, settings):
+        self.app = app
+        self.settings = settings
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive=receive)
+        if request.method == "OPTIONS" or request.url.path in self.PUBLIC_PATHS:
+            scope.setdefault("state", {})["owner_id"] = (
+                "test-user" if self.settings.APP_ENV == "test" else None
+            )
+            await self.app(scope, receive, send)
+            return
+
+        owner_id = None
+        if self.settings.APP_ENV == "test":
+            owner_id = "test-user"
+        else:
+            authorization = request.headers.get("authorization", "")
+            scheme, _, token = authorization.partition(" ")
+            if scheme.lower() == "bearer" and token:
+                owner_id = decode_access_token(token, self.settings.AUTH_SECRET_KEY)
+
+        if not owner_id:
+            response = JSONResponse(
+                status_code=401,
+                content={"error": {"code": "UNAUTHENTICATED", "message": "Please sign in to access your StudyVault account."}},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            await response(scope, receive, send)
+            return
+
+        scope.setdefault("state", {})["owner_id"] = owner_id
+        await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -61,6 +115,10 @@ def create_application() -> FastAPI:
         redoc_url="/redoc",
         lifespan=lifespan
     )
+
+    # CORS is added after authentication so browser preflights and 401 responses
+    # retain their CORS headers. Authentication middleware is inside CORS.
+    app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Configure CORS
     app.add_middleware(

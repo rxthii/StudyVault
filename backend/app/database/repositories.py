@@ -7,11 +7,17 @@ from app.models.flashcard import FlashcardSet, Flashcard
 from app.models.quiz import Quiz
 
 
+def _owner_id(db: Session) -> str:
+    return str(db.info.get("owner_id") or "local")
+
+
 class DocumentRepository:
     def __init__(self, db: Session):
         self.db = db
+        self.owner_id = _owner_id(db)
 
     def create(self, doc_data: dict) -> Document:
+        doc_data.setdefault("owner_id", self.owner_id)
         doc = Document(**doc_data)
         self.db.add(doc)
         self.db.commit()
@@ -19,7 +25,10 @@ class DocumentRepository:
         return doc
 
     def get_by_id(self, doc_id: str) -> Optional[Document]:
-        return self.db.query(Document).filter(Document.id == doc_id).first()
+        return self.db.query(Document).filter(
+            Document.id == doc_id,
+            Document.owner_id == self.owner_id,
+        ).first()
 
     def list_documents(
         self,
@@ -27,6 +36,7 @@ class DocumentRepository:
         status: Optional[str] = None
     ) -> List[Document]:
         query = self.db.query(Document)
+        query = query.filter(Document.owner_id == self.owner_id)
         if linked is not None:
             query = query.filter(Document.linked == linked)
         if status is not None:
@@ -95,7 +105,11 @@ class DocumentRepository:
     def get_linked_document_ids(self) -> List[str]:
         results = (
             self.db.query(Document.id)
-            .filter(Document.linked == True, Document.status == "ready")
+            .filter(
+                Document.owner_id == self.owner_id,
+                Document.linked == True,
+                Document.status == "ready",
+            )
             .all()
         )
         return [r[0] for r in results]
@@ -104,20 +118,31 @@ class DocumentRepository:
 class ConversationRepository:
     def __init__(self, db: Session):
         self.db = db
+        self.owner_id = _owner_id(db)
 
     def get_or_create(self, conv_id: Optional[str] = None, title: Optional[str] = None) -> Conversation:
         if conv_id:
-            conv = self.db.query(Conversation).filter(Conversation.id == conv_id).first()
+            conv = self.get_by_id(conv_id)
             if conv:
                 return conv
-        conv = Conversation(id=conv_id, title=title) if conv_id else Conversation(title=title)
+            # Never reuse an ID already belonging to a different account.
+            existing_id = self.db.query(Conversation.id).filter(Conversation.id == conv_id).first()
+            if not existing_id:
+                conv = Conversation(id=conv_id, title=title, owner_id=self.owner_id)
+            else:
+                conv = Conversation(title=title, owner_id=self.owner_id)
+        else:
+            conv = Conversation(title=title, owner_id=self.owner_id)
         self.db.add(conv)
         self.db.commit()
         self.db.refresh(conv)
         return conv
 
     def get_by_id(self, conv_id: str) -> Optional[Conversation]:
-        return self.db.query(Conversation).filter(Conversation.id == conv_id).first()
+        return self.db.query(Conversation).filter(
+            Conversation.id == conv_id,
+            Conversation.owner_id == self.owner_id,
+        ).first()
 
     def add_message(
         self,
@@ -142,6 +167,8 @@ class ConversationRepository:
         return msg
 
     def get_history(self, conv_id: str, limit: int = 20) -> List[Message]:
+        if not self.get_by_id(conv_id):
+            return []
         return (
             self.db.query(Message)
             .filter(Message.conversation_id == conv_id)
@@ -162,6 +189,7 @@ class ConversationRepository:
 class FlashcardRepository:
     def __init__(self, db: Session):
         self.db = db
+        self.owner_id = _owner_id(db)
 
     def create_set(
         self,
@@ -170,7 +198,12 @@ class FlashcardRepository:
         cards_data: List[dict],
         title: Optional[str] = None
     ) -> FlashcardSet:
-        fc_set = FlashcardSet(title=title, difficulty=difficulty, count=count)
+        fc_set = FlashcardSet(
+            title=title,
+            difficulty=difficulty,
+            count=count,
+            owner_id=self.owner_id,
+        )
         self.db.add(fc_set)
         self.db.commit()
         self.db.refresh(fc_set)
@@ -194,10 +227,18 @@ class FlashcardRepository:
         return fc_set
 
     def list_sets(self) -> List[FlashcardSet]:
-        return self.db.query(FlashcardSet).order_by(desc(FlashcardSet.created_at)).all()
+        return (
+            self.db.query(FlashcardSet)
+            .filter(FlashcardSet.owner_id == self.owner_id)
+            .order_by(desc(FlashcardSet.created_at))
+            .all()
+        )
 
     def get_set_by_id(self, set_id: str) -> Optional[FlashcardSet]:
-        return self.db.query(FlashcardSet).filter(FlashcardSet.id == set_id).first()
+        return self.db.query(FlashcardSet).filter(
+            FlashcardSet.id == set_id,
+            FlashcardSet.owner_id == self.owner_id,
+        ).first()
 
     def delete_set(self, set_id: str) -> bool:
         fc_set = self.get_set_by_id(set_id)
@@ -208,7 +249,15 @@ class FlashcardRepository:
         return False
 
     def update_card_status(self, card_id: str, status: str) -> Optional[Flashcard]:
-        card = self.db.query(Flashcard).filter(Flashcard.id == card_id).first()
+        card = (
+            self.db.query(Flashcard)
+            .join(FlashcardSet, Flashcard.set_id == FlashcardSet.id)
+            .filter(
+                Flashcard.id == card_id,
+                FlashcardSet.owner_id == self.owner_id,
+            )
+            .first()
+        )
         if card:
             card.review_status = status
             self.db.commit()
@@ -219,6 +268,7 @@ class FlashcardRepository:
 class QuizRepository:
     def __init__(self, db: Session):
         self.db = db
+        self.owner_id = _owner_id(db)
 
     def create_quiz(
         self,
@@ -232,7 +282,8 @@ class QuizRepository:
             difficulty=difficulty,
             question_count=question_count,
             questions_json=questions_json,
-            completed=False
+            completed=False,
+            owner_id=self.owner_id,
         )
         self.db.add(quiz)
         self.db.commit()
@@ -240,7 +291,10 @@ class QuizRepository:
         return quiz
 
     def get_by_id(self, quiz_id: str) -> Optional[Quiz]:
-        return self.db.query(Quiz).filter(Quiz.id == quiz_id).first()
+        return self.db.query(Quiz).filter(
+            Quiz.id == quiz_id,
+            Quiz.owner_id == self.owner_id,
+        ).first()
 
     def submit_score(self, quiz_id: str, score: int) -> Optional[Quiz]:
         quiz = self.get_by_id(quiz_id)
