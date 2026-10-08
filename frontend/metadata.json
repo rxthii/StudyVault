@@ -1,0 +1,6 @@
+{
+  "name": "StudyVault — Smart Document Knowledge Assistant",
+  "description": "AI-powered academic research and study assistant with verifiable document citations, interactive knowledge scope, flashcards, and quizzes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

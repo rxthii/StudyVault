@@ -1,0 +1,35 @@
+# Local secrets and environment files (keep only templates)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python runtime and generated files
+**/__pycache__/
+*.py[cod]
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+
+# Local application data
+*.db
+*.sqlite
+*.sqlite3
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

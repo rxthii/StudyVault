@@ -1,0 +1,16 @@
+.env
+*.env
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+data/uploads/*
+!data/uploads/.gitkeep
+.vscode/
+.idea/
+*.log
